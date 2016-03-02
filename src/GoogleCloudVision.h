@@ -8,6 +8,12 @@ namespace google
 		double longitude;
 	};
 
+	struct Landmark
+	{
+		string type;
+		ofVec3f position;
+	};
+
 	struct LabelAnnotation
 	{
 		string mid;
@@ -45,6 +51,29 @@ namespace google
 		std::vector<latLng> locations;
 	};
 
+	struct FaceAnnotation
+	{
+		struct {
+			std::vector<ofVec2f> vertices;
+		} boundingPoly;
+		struct {
+			std::vector<ofVec2f> vertices;
+		} fdBoundingPoly;
+		std::vector<Landmark> landmarks;
+		float rollAngle;
+		float panAngle;
+		float tiltAngle;
+		float detectionConfidence;
+		float landmarkingConfidence;
+		string joyLikelihood;
+		string sorrowLikelihood;
+		string angerLikelihood;
+		string surpriseLikelihood;
+		string underExposedLikelihood;
+		string blurredLikelihood;
+		string headwearLikelihood;
+	};
+
 	struct CloudVisionResponse
 	{
 		size_t width = 0;
@@ -53,6 +82,7 @@ namespace google
 		std::vector<TextAnnotation> textAnnotations;
 		std::vector<LogoAnnotation> logoAnnotations;
 		std::vector<LandmarkAnnotation> landmarkAnnotations;
+		std::vector<FaceAnnotation> faceAnnotations;
 	};
 
 

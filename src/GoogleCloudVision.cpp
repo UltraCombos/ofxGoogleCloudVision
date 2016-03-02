@@ -148,11 +148,9 @@ R"(
 			ofBufferToFile("result.json", response.data);
 
 
-			auto getBoundingPolyVertices = [](const ofJson& json, vector<ofVec2f>& container) 
+			auto getVertices = [](const ofJson& json, vector<ofVec2f>& container) 
 			{
-				if (json.find("boundingPoly") == json.end())
-					return;
-				for (auto& vt : json["boundingPoly"]["vertices"])
+				for (auto& vt : json["vertices"])
 				{
 					float x = vt.value("x", 0.0f);
 					float y = vt.value("y", 0.0f);
@@ -170,6 +168,20 @@ R"(
 					ll.latitude = vt["latLng"].value("latitude", 0.0);
 					ll.longitude = vt["latLng"].value("longitude", 0.0);
 					container.emplace_back(ll);
+				}
+			};
+
+			auto getLandmarks = [](const ofJson& json, vector<Landmark>& container)
+			{
+				for (auto& landmark : json["landmarks"])
+				{
+					Landmark lm;
+					lm.type = landmark.value("type", "");
+					float x = landmark["position"].value("x", 0.0f);
+					float y = landmark["position"].value("y", 0.0f);
+					float z = landmark["position"].value("z", 0.0f);
+					lm.position.set(x, y, z);
+					container.emplace_back(lm);
 				}
 			};
 
@@ -192,7 +204,7 @@ R"(
 					TextAnnotation text;
 					text.locale = jsonText.value("locale", "");
 					text.description = jsonText.value("description", "");
-					getBoundingPolyVertices(jsonText, text.boundingPoly.vertices);
+					getVertices(jsonText["boundingPoly"], text.boundingPoly.vertices);
 					res.textAnnotations.emplace_back(text);
 				}
 				for (auto& jsonLogo : jsonResponse["logoAnnotations"])
@@ -201,7 +213,7 @@ R"(
 					logo.mid = jsonLogo.value("mid", "");
 					logo.description = jsonLogo.value("description", "");
 					logo.score = jsonLogo.value("score", 0.0f);
-					getBoundingPolyVertices(jsonLogo, logo.boundingPoly.vertices);
+					getVertices(jsonLogo["boundingPoly"], logo.boundingPoly.vertices);
 					res.logoAnnotations.emplace_back(logo);
 				}
 				for (auto& jsonLandmark : jsonResponse["landmarkAnnotations"])
@@ -210,9 +222,29 @@ R"(
 					landmark.mid = jsonLandmark.value("mid", "");
 					landmark.description = jsonLandmark.value("description", "");
 					landmark.score = jsonLandmark.value("score", 0.0f);
-					getBoundingPolyVertices(jsonLandmark, landmark.boundingPoly.vertices);
+					getVertices(jsonLandmark["boundingPoly"], landmark.boundingPoly.vertices);
 					getLocations(jsonLandmark, landmark.locations);
 					res.landmarkAnnotations.emplace_back(landmark);
+				}
+				for (auto& jsonFace : jsonResponse["faceAnnotations"])
+				{
+					FaceAnnotation face;
+					getVertices(jsonFace["boundingPoly"], face.boundingPoly.vertices);
+					getVertices(jsonFace["fdBoundingPoly"], face.fdBoundingPoly.vertices);
+					getLandmarks(jsonFace, face.landmarks);
+					face.rollAngle = jsonFace.value("rollAngle", 0.0f);
+					face.panAngle = jsonFace.value("panAngle", 0.0f);
+					face.tiltAngle = jsonFace.value("tiltAngle", 0.0f);
+					face.detectionConfidence = jsonFace.value("detectionConfidence", 0.0f);
+					face.landmarkingConfidence = jsonFace.value("landmarkingConfidence", 0.0f);
+					face.joyLikelihood = jsonFace.value("joyLikelihood", "");
+					face.sorrowLikelihood = jsonFace.value("sorrowLikelihood", "");
+					face.angerLikelihood = jsonFace.value("angerLikelihood", "");
+					face.surpriseLikelihood = jsonFace.value("surpriseLikelihood", "");
+					face.underExposedLikelihood = jsonFace.value("underExposedLikelihood", "");
+					face.blurredLikelihood = jsonFace.value("blurredLikelihood", "");
+					face.headwearLikelihood = jsonFace.value("headwearLikelihood", "");
+					res.faceAnnotations.emplace_back(face);
 				}
 				mResponse = make_shared<CloudVisionResponse>(res);
 			}

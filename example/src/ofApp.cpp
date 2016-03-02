@@ -41,6 +41,25 @@ void ofApp::update(){
 	ofSetWindowTitle("oF Application: " + ofToString(ofGetFrameRate(), 1));
 	uElapsedTime = ofGetElapsedTimef();
 	
+
+	if (!inputString.empty())
+	{
+		auto& res = ofLoadURL(inputString);
+		ofImage img;
+		if (img.load(res.data))
+		{
+			printf("get image from %s\n", inputString.c_str());
+			mCloudVision->pushPixels(img.getPixels());
+
+			auto& pix = img.getPixels();
+			tex.allocate(pix.getWidth(), pix.getHeight(), GL_RGB);
+			tex.loadData(pix);
+		}
+
+		inputString = "";
+	}
+
+
 	mFbo->begin();
 	auto rect = ofGetCurrentViewport();
 	ofClear(0);
@@ -50,7 +69,7 @@ void ofApp::update(){
 	if (tex.isAllocated() && result)
 	{
 		ofPushMatrix();
-		texurePosition = ofVec2f(rect.width - result->width, rect.height - result->height) * 0.5f;
+		texurePosition = ofVec2f(rect.width - result->width, (rect.height - result->height) * 0.5f);
 		tex.draw(texurePosition, result->width, result->height);
 		ofPopMatrix();
 	}
@@ -63,9 +82,30 @@ void ofApp::update(){
 		ofTranslate(pos);
 		ofVbo vbo;
 		vbo.setVertexData(&vertices[0].x, 2, vertices.size(), GL_STATIC_DRAW);
-		vbo.draw(GL_TRIANGLE_FAN, 0, vertices.size());
+		vbo.draw(GL_LINE_LOOP, 0, vertices.size());
 		ofPopMatrix();
 		ofPopStyle();
+	};
+
+	auto drawFaceLandmarks = [](ofVec2f pos, vector<google::Landmark> landmarks)
+	{
+#if 0
+		vector<ofVec3f> vertices;
+		for (auto& lm : landmarks)
+			vertices.emplace_back(lm.position);
+		ofPushMatrix();
+		ofTranslate(pos);
+		ofVbo vbo;
+		vbo.setVertexData(&vertices[0].x, 3, vertices.size(), GL_STATIC_DRAW);
+		vbo.draw(GL_POINTS, 0, vertices.size());
+		ofPopMatrix();
+#else
+		ofPushMatrix();
+		ofTranslate(pos);
+		for (auto& lm : landmarks)
+			ofDrawCircle(lm.position, 1);
+		ofPopMatrix();
+#endif
 	};
 	
 	if (result)
@@ -131,7 +171,31 @@ void ofApp::update(){
 			}
 			ofDrawBitmapString(text, textPosition);
 			textPosition += textOffset;
-
+		}
+		if (result->faceAnnotations.size() > 0)
+		{
+			text = "[Face Annotations]\n";
+			for (auto& annotation : result->faceAnnotations)
+			{
+				text += "-------------------\n";
+				text += ofVAArgsToString("rollAngle: %f\n", annotation.rollAngle);
+				text += ofVAArgsToString("panAngle: %f\n", annotation.panAngle);
+				text += ofVAArgsToString("tiltAngle: %f\n", annotation.tiltAngle);
+				text += ofVAArgsToString("detectionConfidence: %f\n", annotation.detectionConfidence);
+				text += ofVAArgsToString("landmarkingConfidence: %f\n", annotation.landmarkingConfidence);
+				text += ofVAArgsToString("joyLikelihood: %s\n", annotation.joyLikelihood.c_str());
+				text += ofVAArgsToString("sorrowLikelihood: %s\n", annotation.sorrowLikelihood.c_str());
+				text += ofVAArgsToString("angerLikelihood: %s\n", annotation.angerLikelihood.c_str());
+				text += ofVAArgsToString("surpriseLikelihood: %s\n", annotation.surpriseLikelihood.c_str());
+				text += ofVAArgsToString("underExposedLikelihood: %s\n", annotation.underExposedLikelihood.c_str());
+				text += ofVAArgsToString("blurredLikelihood: %s\n", annotation.blurredLikelihood.c_str());
+				text += ofVAArgsToString("headwearLikelihood: %s\n", annotation.headwearLikelihood.c_str());
+				drawBoundingPoly(texurePosition, annotation.boundingPoly.vertices);
+				drawBoundingPoly(texurePosition, annotation.fdBoundingPoly.vertices);
+				drawFaceLandmarks(texurePosition, annotation.landmarks);
+			}
+			ofDrawBitmapString(text, textPosition);
+			textPosition += textOffset;
 		}
 	}
 
@@ -164,6 +228,28 @@ void ofApp::keyPressed(int key){
 			ofSetWindowPosition(pos.x, pos.y);
 		}
 	};
+
+	auto getClipboardText = []() ->string
+	{
+		// Try opening the clipboard
+		if (!OpenClipboard(nullptr))
+			return "";
+		// Get handle of clipboard object for ANSI text
+		HANDLE hData = GetClipboardData(CF_TEXT);
+		if (hData == nullptr)
+			return "";
+		// Lock the handle to get the actual text pointer
+		char * pszText = static_cast<char*>(GlobalLock(hData));
+		if (pszText == nullptr)
+			return "";
+		// Save text in a string class instance
+		std::string text(pszText);
+		// Release the lock
+		GlobalUnlock(hData);
+		// Release the clipboard
+		CloseClipboard();
+		return text;
+	};
 	
 	switch (key)
 	{
@@ -175,12 +261,15 @@ void ofApp::keyPressed(int key){
 	case OF_KEY_F11:
 		toggleFullscreen();
 		break;
+	case 'v':
+		inputString = getClipboardText();
+		break;
 	}
 }
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
-
+	
 }
 
 //--------------------------------------------------------------

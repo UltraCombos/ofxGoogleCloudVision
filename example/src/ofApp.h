@@ -46,4 +46,6 @@ private:
 	ofTexture tex;
 
 	google::CloudVisionRef mCloudVision;
+
+	string inputString;
 };
