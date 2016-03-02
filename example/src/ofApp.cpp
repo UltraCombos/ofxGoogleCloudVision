@@ -1,7 +1,5 @@
 ﻿#include "ofApp.h"
 
-#include "Poco/Base64Encoder.h"
-
 //--------------------------------------------------------------
 void ofApp::setup(){
 	ofSetWindowShape(WIDTH, HEIGHT);
