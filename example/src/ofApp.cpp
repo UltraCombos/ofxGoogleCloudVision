@@ -33,7 +33,16 @@ void ofApp::setup(){
 
 	mCloudVision = google::CloudVision::create(key);
 
+	mThread = std::thread(&ofApp::checkURL, this);
+
 	printf("");
+}
+
+void ofApp::exit()
+{
+	isThreadRunning = false;
+	if (mThread.joinable())
+		mThread.join();
 }
 
 //--------------------------------------------------------------
@@ -42,24 +51,15 @@ void ofApp::update(){
 	uElapsedTime = ofGetElapsedTimef();
 	
 
-	if (!inputString.empty())
+	if (pixelQueue.size() > 0)
 	{
-		auto& res = ofLoadURL(inputString);
-		ofImage img;
-		if (img.load(res.data))
-		{
-			printf("get image from %s\n", inputString.c_str());
-			mCloudVision->pushPixels(img.getPixels());
-
-			auto& pix = img.getPixels();
-			tex.allocate(pix.getWidth(), pix.getHeight(), GL_RGB);
-			tex.loadData(pix);
-		}
-
-		inputString = "";
+		std::lock_guard<std::mutex> guard(mMutex);
+		auto& pix = pixelQueue.front();
+		tex.allocate(pix.getWidth(), pix.getHeight(), GL_RGB);
+		tex.loadData(pix);
+		pixelQueue.pop_front();
 	}
-
-
+	
 	mFbo->begin();
 	auto rect = ofGetCurrentViewport();
 	ofClear(0);
@@ -327,3 +327,23 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
 	tex.loadData(pix);
 }
 
+void ofApp::checkURL()
+{
+	while (isThreadRunning)
+	{
+		if (inputString.empty())
+			continue;
+
+		auto& res = ofLoadURL(inputString);
+		ofPixels pix;
+		if (ofLoadImage(pix, res.data))
+		{
+			printf("get image from %s\n", inputString.c_str());
+			mCloudVision->pushPixels(pix);
+			std::lock_guard<std::mutex> guard(mMutex);
+			pixelQueue.emplace_back(pix);
+		}
+
+		inputString = "";
+	}
+}

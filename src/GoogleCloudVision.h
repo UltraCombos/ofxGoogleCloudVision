@@ -97,6 +97,7 @@ namespace google
 		}
 		~CloudVision();
 		void pushPixels(const ofPixels& pix);
+		void pushURL(const string& url);
 		std::shared_ptr<CloudVisionResponse> getResult();
 		void stop();
 
@@ -111,6 +112,7 @@ namespace google
 		string GOOGLE_BROWSER_KEY = "";
 		
 		std::condition_variable condition;
+		string mURL = "";
 		std::deque<ofPixels> pixelQueue;
 		std::shared_ptr<CloudVisionResponse> mResponse;
 	};

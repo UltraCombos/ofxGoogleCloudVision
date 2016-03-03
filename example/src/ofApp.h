@@ -12,6 +12,7 @@ public:
 	void setup();
 	void update();
 	void draw();
+	void exit();
 
 	void keyPressed(int key);
 	void keyReleased(int key);
@@ -26,6 +27,8 @@ public:
 	void gotMessage(ofMessage msg);
 	
 protected:
+	void checkURL();
+
 
 private:
 	enum {
@@ -48,4 +51,8 @@ private:
 	google::CloudVisionRef mCloudVision;
 
 	string inputString;
+	std::mutex mMutex;
+	std::thread mThread;
+	bool isThreadRunning = true;
+	std::deque<ofPixels> pixelQueue;
 };

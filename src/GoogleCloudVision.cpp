@@ -34,6 +34,11 @@ namespace google
 		waitForThread(false);
 	}
 
+	void CloudVision::pushURL(const string& url)
+	{
+		mURL = url;
+	}
+
 	void CloudVision::pushPixels(const ofPixels& pix)
 	{
 		std::unique_lock<std::mutex> lck(mutex);
@@ -56,6 +61,18 @@ namespace google
 	{
 		while (isThreadRunning())
 		{
+			if (!mURL.empty())
+			{
+				auto& res = ofLoadURL(mURL);
+				ofImage img;
+				if (img.load(res.data))
+				{
+					printf("[Cloud Vision] get image from %s\n", mURL.c_str());
+					pushPixels(img.getPixels());
+				}
+				mURL = "";
+			}
+
 			if (pixelQueue.size() == 0)
 				continue;
 
@@ -87,11 +104,7 @@ namespace google
 				pixelQueue.pop_front();
 			}
 			string img_encoded = toBase64(buffer);
-
-
-			string type = "LABEL_DETECTION"; // LABEL_DETECTION, TEXT_DETECTION, FACE_DETECTION, LANDMARK_DETECTION, LOGO_DETECTION, SAFE_SEARCH_DETECTION, IMAGE_PROPERTIES
-			size_t maxResults = 3;
-
+			
 			map<string, size_t> types;
 			types["LABEL_DETECTION"] = 3;
 			types["TEXT_DETECTION"] = 3;
