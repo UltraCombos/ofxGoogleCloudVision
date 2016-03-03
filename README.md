@@ -1,4 +1,4 @@
 # ofxGoogleCloudVision
-openFrameworks wrapper for Google Cloud Vision
+Google Cloud Vision wrapper for openFrameworks
 
 only for openFrameworks github version
